@@ -1,0 +1,15 @@
+{
+  "name": "scripts",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@solana/buffer-layout": "^3.0.0",
+    "@solana/spl-token": "^0.1.8",
+    "@solana/web3.js": "^1.30.0"
+  },
+  "devDependencies": {
+    "ts-node": "^10.4.0",
+    "typescript": "^4.4.4"
+  }
+}

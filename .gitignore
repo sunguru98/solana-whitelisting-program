@@ -1,0 +1,8 @@
+program/target
+
+scripts/node_modules
+scripts/keys
+scripts/yarn-error.log
+
+front-end/node_modules
+front-end/.next
