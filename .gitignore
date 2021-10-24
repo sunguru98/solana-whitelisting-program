@@ -1,7 +1,7 @@
 program/target
 
 scripts/node_modules
-scripts/keys
+scripts/src/keys
 scripts/yarn-error.log
 
 front-end/node_modules
