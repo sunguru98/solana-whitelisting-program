@@ -1,4 +1,5 @@
-program/target
+program/whitelist/target
+program/token-swap/target
 
 scripts/node_modules
 scripts/src/keys

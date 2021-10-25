@@ -1,3 +1,5 @@
+cargo-features = ["edition2021"]
+
 [package]
 name = "whitelist-program"
 version = "0.1.0"
@@ -5,11 +7,18 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+no-entrypoint = []
+
 [dependencies]
 solana-program = "1.8.1"
+spl-token-swap = { version = "2.1.0", path = "../token-swap", features = ["no-entrypoint"] }
 spl-token = {version = "3.2.0", features = ["no-entrypoint"]}
 borsh = "0.9.1"
 borsh-derive = "0.9.1"
+thiserror = "1.0.30"
+num-derive = "0.3.3"
+num-traits = "0.2"
 
 [lib]
 crate-type = ["cdylib", "lib"]
