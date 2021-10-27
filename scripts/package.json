@@ -17,6 +17,7 @@
   },
   "scripts": {
     "initpda": "ts-node src/features/initializePda.ts",
-    "storeaddress": "ts-node src/features/storeMainAddresses.ts"
+    "storeaddress": "ts-node src/features/storeMainAddresses.ts",
+    "fundaddress": "ts-node src/features/fundMainAddresses.ts"
   }
 }

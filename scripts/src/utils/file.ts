@@ -16,7 +16,6 @@ export const checkKeysDir = async () => fs.pathExists(KEYS_FOLDER);
 export const storeKeypair = async (
   name: string,
   type: WhiteListKeyType,
-  requireFunding: boolean = true,
   rewrite: boolean = false,
   keypair: Keypair = new Keypair()
 ): Promise<boolean> => {
@@ -31,14 +30,6 @@ export const storeKeypair = async (
       await fs.writeJSON(
         path.resolve(KEYS_FOLDER, type, name, "publicKey.json"),
         keypair.publicKey.toString()
-      );
-    }
-
-    if (requireFunding) {
-      console.log(`FUNDING ${keypair.publicKey.toString()}`);
-      SOLANA_CONNECTION.requestAirdrop(
-        keypair.publicKey,
-        LAMPORTS_PER_SOL * 100
       );
     }
 

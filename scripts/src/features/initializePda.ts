@@ -1,13 +1,11 @@
 import {
   Keypair,
+  LAMPORTS_PER_SOL,
   PublicKey,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import {
-  formatWhitelistPDAData,
-  getWhitelistStateLayout,
-} from "../utils/layout";
+import { formatWhitelistPDAData } from "../utils/layout";
 import {
   SOLANA_CONNECTION,
   SYSTEM_PROGRAM_ID,
@@ -49,7 +47,8 @@ import { checkKeysDir, getKeyPair } from "../utils/file";
     console.log("GENERATED PDA", whitelistProgramPDA.toString());
     console.log(
       "WHITELIST CREATOR BALANCE",
-      await SOLANA_CONNECTION.getBalance(whitelistCreator.publicKey)
+      (await SOLANA_CONNECTION.getBalance(whitelistCreator.publicKey)) /
+        LAMPORTS_PER_SOL
     );
 
     const initWhiteListIx = new TransactionInstruction({
