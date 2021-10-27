@@ -14,6 +14,7 @@ no-entrypoint = []
 solana-program = "1.8.1"
 spl-token-swap = { version = "2.1.0", path = "../token-swap", features = ["no-entrypoint"] }
 spl-token = {version = "3.2.0", features = ["no-entrypoint"]}
+spl-associated-token-account = {version = "1.0.1", features = ["no-entrypoint"]}
 borsh = "0.9.1"
 borsh-derive = "0.9.1"
 thiserror = "1.0.30"

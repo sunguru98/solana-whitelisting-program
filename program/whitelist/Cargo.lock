@@ -911,6 +911,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "spl-associated-token-account"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "393e2240d521c3dd770806bff25c2c00d761ac962be106e14e22dd912007f428"
+dependencies = [
+ "solana-program",
+ "spl-token",
+]
+
+[[package]]
 name = "spl-math"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1059,6 +1069,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "solana-program",
+ "spl-associated-token-account",
  "spl-token",
  "spl-token-swap",
  "thiserror",
