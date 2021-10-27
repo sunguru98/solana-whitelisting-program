@@ -261,10 +261,7 @@ impl WhiteListProcessor {
         )?;
 
         // Checking if the associated account already exists
-        if !associated_token_pda_account
-            .key
-            .eq(&associated_token_program_id())
-        {
+        if !associated_token_pda_account.owner.eq(&token_program_id()) {
             msg!("Whitelist WrapSOLToken: Associated token account does not exist");
             return Err(ProgramError::UninitializedAccount);
         }
