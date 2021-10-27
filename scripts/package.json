@@ -19,6 +19,7 @@
     "initpda": "ts-node src/features/initializePda.ts",
     "storeaddress": "ts-node src/features/storeMainAddresses.ts",
     "fundaddress": "ts-node src/features/fundMainAddresses.ts",
-    "wrapsol": "ts-node src/features/wrapSol.ts"
+    "wrapsol": "ts-node src/features/wrapSol.ts",
+    "unwrapsol": "ts-node src/features/unwrapSol.ts"
   }
 }
