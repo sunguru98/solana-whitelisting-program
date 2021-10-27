@@ -1,10 +1,12 @@
 import path from "path";
 import fs from "fs-extra";
-import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import { WhiteListKeyType } from "../types";
-import { SOLANA_CONNECTION } from "../constants";
 
 export const KEYS_FOLDER = path.resolve(__dirname, "../", "keys");
+
+export const sleep = (timeInMs: number) =>
+  new Promise((resolve) => setTimeout(resolve, timeInMs));
 
 async function createDirectories(subDir?: string) {
   await fs.mkdirp(path.resolve(KEYS_FOLDER));
