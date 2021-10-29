@@ -15,8 +15,8 @@ import {
   SYSTEM_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
   WHITELIST_PROGRAM_ID,
-} from "../constants";
-import { checkKeysDir, getKeyPair, sleep } from "../utils/file";
+} from "../../constants";
+import { checkKeysDir, getKeyPair, sleep } from "../../utils/file";
 
 (async function () {
   try {

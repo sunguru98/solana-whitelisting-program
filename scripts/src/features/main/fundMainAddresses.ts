@@ -1,6 +1,6 @@
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { SOLANA_CONNECTION } from "../constants";
-import { checkKeysDir, getKeyPair } from "../utils/file";
+import { SOLANA_CONNECTION } from "../../constants";
+import { checkKeysDir, getKeyPair } from "../../utils/file";
 
 (async function () {
   try {

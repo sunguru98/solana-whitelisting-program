@@ -5,13 +5,13 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { formatWhitelistPDAData } from "../utils/layout";
+import { formatWhitelistPDAData } from "../../utils/layout";
 import {
   SOLANA_CONNECTION,
   SYSTEM_PROGRAM_ID,
   WHITELIST_PROGRAM_ID,
-} from "../constants";
-import { checkKeysDir, getKeyPair } from "../utils/file";
+} from "../../constants";
+import { checkKeysDir, getKeyPair } from "../../utils/file";
 
 (async function () {
   try {

@@ -2,6 +2,8 @@ import path from "path";
 import fs from "fs-extra";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { WhiteListKeyType } from "../types";
+import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { SOLANA_CONNECTION, TOKEN_ACCOUNT_PATHS } from "../constants";
 
 export const KEYS_FOLDER = path.resolve(__dirname, "../", "keys");
 
@@ -14,6 +16,26 @@ async function createDirectories(subDir?: string) {
 }
 
 export const checkKeysDir = async () => fs.pathExists(KEYS_FOLDER);
+
+export const storePublicKey = async (
+  name: string,
+  type: WhiteListKeyType,
+  publicKey: PublicKey,
+  rewrite = false
+) => {
+  try {
+    if (rewrite) {
+      await fs.writeJSON(
+        path.resolve(KEYS_FOLDER, type, name, "publicKey.json"),
+        publicKey.toString()
+      );
+    }
+    return true;
+  } catch (err) {
+    console.error(err.message);
+    return false;
+  }
+};
 
 export const storeKeypair = async (
   name: string,
@@ -62,6 +84,53 @@ export const getKeyPair = async (name: string, type: WhiteListKeyType) => {
     });
   } catch (err) {
     return null;
+  }
+};
+
+export const getMintToken = async (name: string, payer: Keypair) => {
+  const mintPubKey = await fs.readJSON(
+    path.resolve(KEYS_FOLDER, "mints", name, "publicKey.json")
+  );
+
+  if (mintPubKey) {
+    return new Token(
+      SOLANA_CONNECTION,
+      new PublicKey(mintPubKey),
+      TOKEN_PROGRAM_ID,
+      payer
+    );
+  }
+
+  return null;
+};
+
+export const getTokenAccount = async (name: string, token: string) => {
+  try {
+    const publicKey = await fs.readJSON(
+      path.resolve(TOKEN_ACCOUNT_PATHS[token], `${name}.json`)
+    );
+    return new PublicKey(publicKey);
+  } catch (err) {
+    return null;
+  }
+};
+
+export const storeTokenAccount = async (
+  name: string,
+  token: string,
+  account: PublicKey,
+  rewrite: boolean = false
+) => {
+  try {
+    if (rewrite) {
+      await fs.writeJSON(
+        path.resolve(TOKEN_ACCOUNT_PATHS[token], `${name}.json`),
+        account.toString()
+      );
+    }
+    return true;
+  } catch (err) {
+    return false;
   }
 };
 
