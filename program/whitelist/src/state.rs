@@ -4,10 +4,14 @@ use solana_program::{program_pack::IsInitialized, pubkey::Pubkey};
 #[derive(Debug, BorshSerialize, BorshDeserialize)]
 pub struct WhitelistPDAGlobalState {
     pub whitelist_creator: Pubkey,
-    pub whitelist_auth_addresses: [Pubkey; 5],
+    pub global_pda_bump: u8,
+    pub whitelist_auth_addresses: [Pubkey; 6],
     pub is_initialized: bool,
     pub token_swap_pool_state: Pubkey,
+    pub y_mint_account: Pubkey,
     pub y_token_account: Pubkey,
+    pub native_sol_token_account: Pubkey,
+    pub price_per_token_y: u64,
 }
 
 impl IsInitialized for WhitelistPDAGlobalState {

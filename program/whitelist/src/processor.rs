@@ -5,6 +5,7 @@ use solana_program::{
     msg,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
+    program_pack::Pack,
     pubkey::Pubkey,
     rent::Rent,
     system_instruction,
@@ -19,10 +20,13 @@ use spl_token::{
     id as token_program_id,
     instruction::{close_account, sync_native},
     native_mint::id as native_mint_account,
+    state::Account as TokenState,
 };
+use spl_token_swap::{id as token_swap_program_id, state::SwapVersion};
 
 use std::convert::TryInto;
 
+use crate::error::WhiteListError::{IncorrectPoolOwner, IncorrectTokenOwner};
 use crate::instruction::WhiteListInstruction;
 use crate::state::WhitelistPDAGlobalState;
 
@@ -90,10 +94,15 @@ impl WhiteListProcessor {
     fn process_whitelist_initialize(
         authorized_addresses: Vec<Pubkey>,
         whitelist_pda_bump: u8,
+        price_per_token_y: u64,
         program_id: &Pubkey,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         msg!("DONE PDA BUMP PARSE :) {}", whitelist_pda_bump.to_string());
+        msg!(
+            "DONE PRICE PER TOKEN Y PARSE :) {}",
+            price_per_token_y.to_string()
+        );
         msg!(
             "DONE AUTHORIZED ADDRESS 1 PARSE :) {}",
             authorized_addresses[0].to_string()
@@ -114,11 +123,19 @@ impl WhiteListProcessor {
             "DONE AUTHORIZED ADDRESS 5 PARSE :) {}",
             authorized_addresses[4].to_string()
         );
+        msg!(
+            "DONE AUTHORIZED ADDRESS 6 PARSE :) {}",
+            authorized_addresses[5].to_string()
+        );
 
         // All accounts
         let accounts_iterable = &mut accounts.iter();
         let whitelist_creator = next_account_info(accounts_iterable)?;
         let whitelist_pda_account = next_account_info(accounts_iterable)?;
+        let token_swap_pool_state_account = next_account_info(accounts_iterable)?;
+        let y_token_mint_account = next_account_info(accounts_iterable)?;
+        let y_token_account = next_account_info(accounts_iterable)?;
+        let native_sol_token_account = next_account_info(accounts_iterable)?;
         let system_program_account = next_account_info(accounts_iterable)?;
 
         let rent = Rent::get()?;
@@ -126,13 +143,74 @@ impl WhiteListProcessor {
         let pda_seeds_bump: &[&[u8]] = &[
             b"whitelistpda",
             &whitelist_creator.key.to_bytes(),
+            &y_token_account.key.to_bytes(),
             &[whitelist_pda_bump],
         ];
 
         let whitelist_program_address = Pubkey::create_program_address(pda_seeds_bump, program_id)?;
 
-        const PDA_ACCOUNT_SPAN: u64 = 257;
+        const PDA_ACCOUNT_SPAN: u64 = 362;
         let lamports_required = rent.minimum_balance(PDA_ACCOUNT_SPAN.try_into().unwrap());
+
+        // Checking if the pool state account passed is the correct account
+        if !token_swap_pool_state_account
+            .owner
+            .eq(&token_swap_program_id())
+        {
+            msg!("Whitelist Initialize: Passed Token Swap State Account's owner is not the Token Swap Program");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        // Checking if the pool state account is initialized
+        let pool_state_account_decoded =
+            SwapVersion::unpack(&token_swap_pool_state_account.data.borrow())?;
+
+        if !pool_state_account_decoded.is_initialized() {
+            msg!("Whitelist Initialize: Token Swap State Account not intialized");
+            return Err(IncorrectPoolOwner.into());
+        }
+
+        // Checking if the token accounts's owner is the token program
+        if !y_token_account.owner.eq(&token_program_id()) {
+            msg!("Whitelist Initialize: Y Token account passed is not a Token Program Account");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        if !native_sol_token_account.owner.eq(&token_program_id()) {
+            msg!("Whitelist Initialize: Y Token account passed is not a Token Program Account");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        // Checking if the token accounts owner is the swap authority
+        let swap_authority = Pubkey::create_program_address(
+            &[
+                &token_swap_pool_state_account.key.to_bytes(),
+                &[pool_state_account_decoded.bump_seed()],
+            ],
+            &token_swap_program_id(),
+        )?;
+
+        let y_token_account_decoded = TokenState::unpack(&y_token_account.data.borrow())?;
+        let native_token_account_decoded =
+            TokenState::unpack(&native_sol_token_account.data.borrow())?;
+
+        if !y_token_account_decoded.owner.eq(&swap_authority) {
+            msg!("Whitelist Initialize: Y Token Account's owner is not the Swap Authority");
+            return Err(IncorrectTokenOwner.into());
+        }
+
+        if !native_token_account_decoded.owner.eq(&swap_authority) {
+            msg!(
+                "Whitelist Initialize: Native SOL Token Account's owner is not the Swap Authority"
+            );
+            return Err(IncorrectTokenOwner.into());
+        }
+
+        // Checking about the value of price per token B
+        if price_per_token_y == 0 {
+            msg!("Whitelist Initialize: Price per Token B should be greater than 0");
+            return Err(ProgramError::InvalidInstructionData);
+        }
 
         // Checking if the resultant PDA address matches
         if !whitelist_pda_account.key.eq(&whitelist_program_address) {
@@ -218,13 +296,20 @@ impl WhiteListProcessor {
 
         whitelist_pda_state.is_initialized = true;
         whitelist_pda_state.whitelist_creator = *whitelist_creator.key;
+        whitelist_pda_state.global_pda_bump = whitelist_pda_bump;
         whitelist_pda_state.whitelist_auth_addresses = [
             authorized_addresses[0],
             authorized_addresses[1],
             authorized_addresses[2],
             authorized_addresses[3],
             authorized_addresses[4],
+            authorized_addresses[5],
         ];
+        whitelist_pda_state.native_sol_token_account = *native_sol_token_account.key;
+        whitelist_pda_state.token_swap_pool_state = *token_swap_pool_state_account.key;
+        whitelist_pda_state.y_mint_account = *y_token_mint_account.key;
+        whitelist_pda_state.y_token_account = *y_token_account.key;
+        whitelist_pda_state.price_per_token_y = price_per_token_y;
 
         whitelist_pda_state.serialize(&mut &mut whitelist_pda_account.data.borrow_mut()[..])?;
 
@@ -475,12 +560,14 @@ impl WhiteListProcessor {
         match whitelist_instrution {
             WhiteListInstruction::InitWhiteList {
                 authorized_addresses,
+                price_per_token_y,
                 whitelist_pda_bump,
             } => {
                 msg!("Instruction: Whitelist Initialize");
                 Self::process_whitelist_initialize(
                     authorized_addresses,
                     whitelist_pda_bump,
+                    price_per_token_y,
                     program_id,
                     accounts,
                 )

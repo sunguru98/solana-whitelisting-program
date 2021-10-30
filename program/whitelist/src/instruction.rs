@@ -9,9 +9,14 @@ pub enum WhiteListInstruction {
     ///
     /// 0. `[signer]` Whitelist program creator to create the pda account storage
     /// 1. `[writable]` Whitelist PDA account
-    /// 2. [] System program
+    /// 2. [] Token Swap Pool State account
+    /// 3. [] Y Token Mint account
+    /// 4. [] Y Token account
+    /// 5. [] Native sol token account
+    /// 6. [] System program
     InitWhiteList {
         whitelist_pda_bump: u8,
+        price_per_token_y: u64,
         authorized_addresses: Vec<Pubkey>,
     },
 
@@ -75,7 +80,7 @@ impl WhiteListInstruction {
         let mut pub_keys: Vec<Pubkey> = vec![];
         let mut rest_data: &[u8] = addresses_byte_data_array;
 
-        for _ in [0, 1, 2, 3, 4].iter() {
+        for _ in [0, 1, 2, 3, 4, 5].iter() {
             let (address, rest) = Self::unpack_pubkey(rest_data)?;
             pub_keys.push(address);
             rest_data = rest;
@@ -90,7 +95,8 @@ impl WhiteListInstruction {
         match tag {
             0 => Ok(WhiteListInstruction::InitWhiteList {
                 whitelist_pda_bump: *rest.split_first().unwrap().0,
-                authorized_addresses: Self::parse_authorized_addresses(rest.get(1..).unwrap())?,
+                price_per_token_y: Self::parse_amount(rest.get(1..9).unwrap())?,
+                authorized_addresses: Self::parse_authorized_addresses(rest.get(9..).unwrap())?,
             }),
 
             1 => Ok(WhiteListInstruction::CreateAndWrapSOLToken {
