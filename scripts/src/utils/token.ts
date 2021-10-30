@@ -2,6 +2,7 @@ import { AccountLayout, Token } from "@solana/spl-token";
 import {
   Keypair,
   LAMPORTS_PER_SOL,
+  PublicKey,
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
@@ -49,3 +50,18 @@ export async function createTokenAccountWithSOL(
 
   return wSolTokenAccount.publicKey;
 }
+
+export const transferTokenOwner = async (
+  mint: Token,
+  tokenAccount: PublicKey,
+  owner: Keypair,
+  newOwner: PublicKey
+) => {
+  try {
+    await mint.setAuthority(tokenAccount, newOwner, "AccountOwner", owner, []);
+    return true;
+  } catch (err) {
+    console.error(err.message);
+    return false;
+  }
+};

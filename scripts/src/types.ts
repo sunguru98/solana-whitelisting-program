@@ -1,10 +1,12 @@
-import { PublicKey } from "@solana/web3.js";
-
-export type WhiteListKeyType = "persons" | "tokens" | "mints";
+export type WhiteListKeyType = "persons" | "tokens" | "mints" | "state";
 export type WhiteListGlobalState = {
-  whitelistCreator: PublicKey;
-  authorizedAddresses: PublicKey[];
+  whitelistCreator: string;
+  globalPDABump: number;
+  authorizedAddresses: string[];
   isInitialized: boolean;
-  tokenSwapPoolStateAccount: PublicKey;
-  yTokenAccount: PublicKey;
+  tokenSwapPoolStateAccount: string;
+  yTokenMintAccount: string;
+  yTokenAccount: string;
+  nativeSolTokenAccount: string;
+  pricePerTokenY: number;
 };

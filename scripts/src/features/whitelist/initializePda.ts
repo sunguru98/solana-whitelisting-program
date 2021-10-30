@@ -1,36 +1,50 @@
 import {
   Keypair,
-  LAMPORTS_PER_SOL,
   PublicKey,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
 import { formatWhitelistPDAData } from "../../utils/layout";
 import {
+  PRICE_PER_TOKEN_B,
   SOLANA_CONNECTION,
   SYSTEM_PROGRAM_ID,
   WHITELIST_PROGRAM_ID,
 } from "../../constants";
-import { checkKeysDir, getKeyPair } from "../../utils/file";
+import {
+  checkKeysDir,
+  getKeyPair,
+  getMintToken,
+  getTokenAccount,
+  sleep,
+  storePublicKey,
+} from "../../utils/file";
+import BN from "bn.js";
 
 (async function () {
   try {
-    if (!(await checkKeysDir())) {
-      throw new Error(
-        "Keys directory is not present. Please generate keys using yarn storeaddress"
-      );
-    }
+    const {
+      tokenSwapStateAccount,
+      wlstTokenAccount,
+      wsolTokenAccount,
+      whitelistCreator,
+      wlstMint,
+    } = await checkForPreRequisites();
 
-    const whitelistCreator = (await getKeyPair("whitelistCreator", "persons"))!;
-
-    const [w1, w2, w3, w4, w5] = [1, 2, 3, 4, 5].map(() => {
-      const pubkey = Keypair.generate().publicKey;
-      console.log("", pubkey.toString());
-      return pubkey.toBuffer();
-    });
+    const [whitelistCreatorBuf, w1, w2, w3, w4, w5] = [
+      whitelistCreator.publicKey.toBuffer(),
+      ...[1, 2, 3, 4, 5].map(() => {
+        const pubkey = Keypair.generate().publicKey;
+        return pubkey.toBuffer();
+      }),
+    ];
 
     const [whitelistProgramPDA, bump] = await PublicKey.findProgramAddress(
-      [Buffer.from("whitelistpda"), whitelistCreator.publicKey.toBytes()],
+      [
+        Buffer.from("whitelistpda"),
+        whitelistCreator.publicKey.toBytes(),
+        wlstTokenAccount.toBytes(),
+      ],
       WHITELIST_PROGRAM_ID
     );
 
@@ -38,18 +52,11 @@ import { checkKeysDir, getKeyPair } from "../../utils/file";
       whitelistProgramPDA
     );
 
-    console.log(formatWhitelistPDAData(whitelistProgramAccount?.data));
-
     if (whitelistProgramAccount) {
       throw new Error("Account already exists");
     }
 
     console.log("GENERATED PDA", whitelistProgramPDA.toString());
-    console.log(
-      "WHITELIST CREATOR BALANCE",
-      (await SOLANA_CONNECTION.getBalance(whitelistCreator.publicKey)) /
-        LAMPORTS_PER_SOL
-    );
 
     const initWhiteListIx = new TransactionInstruction({
       programId: WHITELIST_PROGRAM_ID,
@@ -67,10 +74,40 @@ import { checkKeysDir, getKeyPair } from "../../utils/file";
         {
           isSigner: false,
           isWritable: false,
+          pubkey: tokenSwapStateAccount.publicKey,
+        },
+        {
+          isSigner: false,
+          isWritable: false,
+          pubkey: wlstMint.publicKey,
+        },
+        {
+          isSigner: false,
+          isWritable: false,
+          pubkey: wlstTokenAccount,
+        },
+        {
+          isSigner: false,
+          isWritable: false,
+          pubkey: wsolTokenAccount,
+        },
+        {
+          isSigner: false,
+          isWritable: false,
           pubkey: SYSTEM_PROGRAM_ID,
         },
       ],
-      data: Buffer.from([0, bump, ...w1, ...w2, ...w3, ...w4, ...w5]),
+      data: Buffer.from([
+        0,
+        bump,
+        ...new BN(PRICE_PER_TOKEN_B).toArray("le", 8),
+        ...whitelistCreatorBuf,
+        ...w1,
+        ...w2,
+        ...w3,
+        ...w4,
+        ...w5,
+      ]),
     });
 
     await SOLANA_CONNECTION.sendTransaction(
@@ -78,7 +115,69 @@ import { checkKeysDir, getKeyPair } from "../../utils/file";
       [whitelistCreator],
       { preflightCommitment: "confirmed", skipPreflight: false }
     );
+
+    console.log(
+      "INITIALIZED WHITELIST PDA SUCCESSFULLY. DECIPHERING WHITELIST STATE"
+    );
+    await sleep(2000);
+    await storePublicKey("whiteList", "state", whitelistProgramPDA, true);
+    const whiteAccInfo = await SOLANA_CONNECTION.getAccountInfo(
+      whitelistProgramPDA
+    );
+    console.log(formatWhitelistPDAData(whiteAccInfo?.data));
   } catch (err) {
     console.error(err);
   }
 })();
+
+async function checkForPreRequisites() {
+  if (!(await checkKeysDir())) {
+    throw new Error(
+      "Keys directory is not present. Please generate keys using yarn storeaddress"
+    );
+  }
+
+  const whitelistCreator = (await getKeyPair("whitelistCreator", "persons"))!;
+
+  if (!whitelistCreator) {
+    throw new Error("Whitelist creator not found");
+  }
+
+  if (!(await SOLANA_CONNECTION.getBalance(whitelistCreator.publicKey))) {
+    throw new Error(
+      "Whitelist Creator has insufficient funds. Please run yarn fundaddress to fund all the accounts"
+    );
+  }
+
+  const tokenSwapStateAccount = await getKeyPair("tokenSwap", "state");
+
+  if (!tokenSwapStateAccount) {
+    throw new Error("Token Swap State Account not found");
+  }
+
+  const tokenSwapData = await SOLANA_CONNECTION.getAccountInfo(
+    tokenSwapStateAccount.publicKey
+  );
+
+  if (!tokenSwapData) {
+    throw new Error(
+      "Token Swap Account not Initialized. Please run yarn createpool"
+    );
+  }
+
+  const wlstMint = await getMintToken("wlst", whitelistCreator);
+  const wlstTokenAccount = await getTokenAccount("whitelistCreator", "wlst");
+  const wsolTokenAccount = await getTokenAccount("whitelistCreator", "wsol");
+
+  if (!wlstMint || !wlstTokenAccount || !wsolTokenAccount) {
+    throw new Error("Required token accounts not found");
+  }
+
+  return {
+    whitelistCreator,
+    tokenSwapStateAccount,
+    wlstMint,
+    wlstTokenAccount,
+    wsolTokenAccount,
+  };
+}

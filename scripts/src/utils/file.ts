@@ -42,7 +42,7 @@ export const storeKeypair = async (
   type: WhiteListKeyType,
   rewrite: boolean = false,
   keypair: Keypair = new Keypair()
-): Promise<boolean> => {
+): Promise<Keypair | false> => {
   try {
     if (rewrite) {
       await createDirectories(type);
@@ -57,7 +57,7 @@ export const storeKeypair = async (
       );
     }
 
-    return true;
+    return keypair;
   } catch (err) {
     console.error(err.message);
     return false;
@@ -104,10 +104,10 @@ export const getMintToken = async (name: string, payer: Keypair) => {
   return null;
 };
 
-export const getTokenAccount = async (name: string, token: string) => {
+export const getTokenAccount = async (owner: string, token: string) => {
   try {
     const publicKey = await fs.readJSON(
-      path.resolve(TOKEN_ACCOUNT_PATHS[token], `${name}.json`)
+      path.resolve(TOKEN_ACCOUNT_PATHS[token], `${owner}.json`)
     );
     return new PublicKey(publicKey);
   } catch (err) {

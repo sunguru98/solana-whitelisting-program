@@ -1,8 +1,5 @@
-import fs from "fs-extra";
-
 import {
   SOLANA_CONNECTION,
-  TOKEN_ACCOUNT_PATHS,
   TOKEN_NAMES,
   TOTAL_ACCOUNTS_ALLOWED,
 } from "../../constants";
@@ -44,11 +41,6 @@ import { createTokenAccountWithSOL } from "../../utils/token";
       );
     }
 
-    console.log("CREATING TOKEN ACCOUNT DIRECTORIES");
-    await fs.mkdirp(TOKEN_ACCOUNT_PATHS.wsol);
-    await fs.mkdirp(TOKEN_ACCOUNT_PATHS.wlst);
-    await fs.mkdirp(TOKEN_ACCOUNT_PATHS.pool);
-
     console.log("CREATING TOKEN A ACCOUNT FOR THE WHITELIST CREATOR");
     const nativeSolAcc = await createTokenAccountWithSOL(whitelistCreator, 1);
     await storeTokenAccount(
@@ -69,7 +61,7 @@ import { createTokenAccountWithSOL } from "../../utils/token";
     await storeTokenAccount(
       "whitelistCreator",
       TOKEN_NAMES["wlst"],
-      nativeSolAcc,
+      wlstTokenAccount,
       true
     );
     console.log(

@@ -14,7 +14,6 @@ import { checkKeysDir, getKeyPair } from "../../utils/file";
       await Promise.all([
         getKeyPair("masterAccount", "persons"),
         getKeyPair("user", "persons"),
-        getKeyPair("tokenCreator", "persons"),
         getKeyPair("whitelistCreator", "persons"),
       ])
     ).forEach(async (keypair) => {

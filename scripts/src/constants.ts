@@ -22,22 +22,31 @@ export const SYSTEM_PROGRAM_ID = SystemProgram.programId;
 export const TOKEN_PROGRAM_ID = TPID;
 export const ASSOCIATED_TOKEN_PROGRAM_ID = ATPID;
 export const NATIVE_MINT = NM;
+
 export const TOKEN_NAMES: Record<string, string> = {
   wsol: "wsol",
   wlst: "wlst",
   pool: "pool",
+  poolRecipient: "poolRecipient",
+  poolFee: "poolFee",
+};
+
+export const TOKEN_STATE_PATHS: Record<string, string> = {
+  tokenSwap: path.resolve(KEYS_FOLDER, "state", "tokenSwap"),
+  whiteList: path.resolve(KEYS_FOLDER, "state", "whiteList"),
 };
 
 export const TOKEN_MINT_PATHS: Record<string, string> = {
-  wsol: path.resolve(KEYS_FOLDER, "mints", TOKEN_NAMES["wsol"]),
-  wlst: path.resolve(KEYS_FOLDER, "mints", TOKEN_NAMES["wlst"]),
-  pool: path.resolve(KEYS_FOLDER, "mints", TOKEN_NAMES["pool"]),
+  wsol: path.resolve(KEYS_FOLDER, "mints", TOKEN_NAMES.wsol),
+  wlst: path.resolve(KEYS_FOLDER, "mints", TOKEN_NAMES.wlst),
+  pool: path.resolve(KEYS_FOLDER, "mints", TOKEN_NAMES.pool),
 };
 
 export const TOKEN_ACCOUNT_PATHS: Record<string, string> = {
-  wsol: path.resolve(KEYS_FOLDER, "tokens", TOKEN_NAMES["wsol"]),
-  wlst: path.resolve(KEYS_FOLDER, "tokens", TOKEN_NAMES["wlst"]),
-  pool: path.resolve(KEYS_FOLDER, "tokens", TOKEN_NAMES["pool"]),
+  wsol: path.resolve(KEYS_FOLDER, "tokens", TOKEN_NAMES.wsol),
+  wlst: path.resolve(KEYS_FOLDER, "tokens", TOKEN_NAMES.wlst),
+  poolRecipient: path.resolve(KEYS_FOLDER, "tokens", TOKEN_NAMES.poolRecipient),
+  poolFee: path.resolve(KEYS_FOLDER, "tokens", TOKEN_NAMES.poolFee),
 };
 
 export const TOTAL_ACCOUNTS_ALLOWED = 5;

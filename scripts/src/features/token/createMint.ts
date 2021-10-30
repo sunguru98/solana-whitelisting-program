@@ -1,6 +1,6 @@
 import fs from "fs-extra";
 import path from "path";
-import { createMint } from "src/utils/mint";
+import { createMint } from "../../utils/mint";
 import {
   NATIVE_MINT,
   SOLANA_CONNECTION,
@@ -31,17 +31,13 @@ import { checkKeysDir, getKeyPair } from "../../utils/file";
       );
     }
 
-    console.log("CREATING TOKEN MINT DIRECTORIES");
-    await fs.mkdirp(TOKEN_MINT_PATHS.wsol);
-    await fs.mkdirp(TOKEN_MINT_PATHS.wlst);
-    await fs.mkdirp(TOKEN_MINT_PATHS.pool);
-
     console.log("WRITING NATIVE MINT PUBKEY");
     await fs.writeJSON(
       path.resolve(TOKEN_MINT_PATHS.wsol, "publicKey.json"),
       NATIVE_MINT.toString()
     );
 
+    console.log("CREATING TOKEN B MINT");
     await createMint(whitelistCreator, TOKEN_NAMES["wlst"]);
   } catch (err) {
     console.error(err.message);
