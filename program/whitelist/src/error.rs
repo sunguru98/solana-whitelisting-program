@@ -12,6 +12,10 @@ pub enum WhiteListError {
     #[error("Incorrect Pool owner")]
     IncorrectPoolOwner,
 
+    // IncorrectStateAccount
+    #[error("Incorrect Account Owner")]
+    IncorrectStateAccount,
+
     // IncorrectTokenOwner
     #[error("Passed token account's owner is not the Swap Authority")]
     IncorrectTokenOwner,
@@ -19,6 +23,14 @@ pub enum WhiteListError {
     // PoolNotInitialized
     #[error("Passed Token Swap Account is not initialized")]
     PoolNotInitialized,
+
+    // AccountNotWhitelisted
+    #[error("Passed account is not allowed for swapping")]
+    AccountNotWhitelisted,
+
+    // AccountAlreadyRedeemed
+    #[error("Passed account has already redeemed SPL Token")]
+    AccountAlreadyRedeemed,
 }
 
 impl From<WhiteListError> for ProgramError {

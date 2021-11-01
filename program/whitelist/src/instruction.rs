@@ -51,6 +51,28 @@ pub enum WhiteListInstruction {
     /// 1. `[writable]` The account to close.
     /// 2. [] SPL Token Program
     UnwrapSOLToken,
+
+    ///   Swap SOL for predefined SPL Token
+    ///
+    ///   0. `[signer]` User account who wants to swap
+    ///   1. `[writable]` Whitelist User State Account
+    ///   2. `[]` Whitelist Global State Account
+    ///   3. `[]` Token Swap State Account
+    ///   4. `[]` Swap authority PDA Account
+    ///   5. `[]` User Transfer Authority Token Account
+    ///   6. `[writable]` User Native SOL Token Account,
+    ///   7. `[writable]` User (**Token Y**) Token Account
+    ///   8. `[writable]` Token Swap Pool Native Sol Token Account.
+    ///   9. `[writable]` Token Swap (**Token Y**) Token Account.
+    ///  10. `[writable]` Pool Mint Token,
+    ///  11. `[writable]` Pool Token Fee Account
+    ///  12. `[writable]` Host fee account to receive additional trading fees
+    ///  13. `[]` Token program id
+    ///  14. `[]` Token Swap program id
+    SwapSOLToken {
+        input_sol_amount: u64,
+        expected_spl_token_amount: u64,
+    },
 }
 
 impl WhiteListInstruction {
@@ -108,6 +130,11 @@ impl WhiteListInstruction {
             }),
 
             3 => Ok(WhiteListInstruction::UnwrapSOLToken),
+
+            4 => Ok(WhiteListInstruction::SwapSOLToken {
+                input_sol_amount: Self::parse_amount(rest.get(0..8).unwrap())?,
+                expected_spl_token_amount: Self::parse_amount(rest.get(8..).unwrap())?,
+            }),
 
             _ => return Err(InvalidInstruction.into()),
         }

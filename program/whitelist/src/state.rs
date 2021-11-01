@@ -19,3 +19,17 @@ impl IsInitialized for WhitelistPDAGlobalState {
         return self.is_initialized;
     }
 }
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+pub struct WhitelistUserState {
+    pub is_initialized: bool,
+    pub whitelisted_by_account: Pubkey,
+    pub whitelisted_at: i64,
+    pub user_transfer_authority_account: Pubkey,
+}
+
+impl IsInitialized for WhitelistUserState {
+    fn is_initialized(&self) -> bool {
+        return self.is_initialized;
+    }
+}

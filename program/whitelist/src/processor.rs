@@ -1,11 +1,12 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
+    clock::Clock,
     entrypoint::ProgramResult,
     msg,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
-    program_pack::Pack,
+    program_pack::{IsInitialized, Pack},
     pubkey::Pubkey,
     rent::Rent,
     system_instruction,
@@ -22,13 +23,23 @@ use spl_token::{
     native_mint::id as native_mint_account,
     state::Account as TokenState,
 };
-use spl_token_swap::{id as token_swap_program_id, state::SwapVersion};
+use spl_token_swap::{
+    id as token_swap_program_id,
+    instruction::{swap, Swap},
+    state::SwapVersion,
+};
 
 use std::convert::TryInto;
 
-use crate::error::WhiteListError::{IncorrectPoolOwner, IncorrectTokenOwner};
 use crate::instruction::WhiteListInstruction;
 use crate::state::WhitelistPDAGlobalState;
+use crate::{
+    error::WhiteListError::{
+        AccountAlreadyRedeemed, AccountNotWhitelisted, IncorrectPoolOwner, IncorrectStateAccount,
+        IncorrectTokenOwner,
+    },
+    state::WhitelistUserState,
+};
 
 // UTIL FUNCTIONS
 fn check_for_wrapping(
@@ -550,6 +561,244 @@ impl WhiteListProcessor {
         Ok(())
     }
 
+    // SWAP SOL FOR SPL TOKEN
+    fn process_whitelist_swap_sol(
+        input_sol_amount: u64,
+        expected_spl_token_amount: u64,
+        accounts: &[AccountInfo],
+        program_id: &Pubkey,
+    ) -> ProgramResult {
+        let accounts_iterable = &mut accounts.iter();
+        // Whitelist program related accounts
+        let user_account = next_account_info(accounts_iterable)?;
+        let whitelist_user_state_account = next_account_info(accounts_iterable)?;
+        let whitelist_global_state_account = next_account_info(accounts_iterable)?;
+
+        // Token swap related accounts
+        let token_swap_state_account = next_account_info(accounts_iterable)?;
+        let swap_authority_pda_account = next_account_info(accounts_iterable)?;
+        let user_temporary_auth_token_account = next_account_info(accounts_iterable)?;
+        let user_native_sol_token_account = next_account_info(accounts_iterable)?;
+        let user_wlst_token_account = next_account_info(accounts_iterable)?;
+        let token_swap_native_sol_token_account = next_account_info(accounts_iterable)?;
+        let token_swap_wlst_token_account = next_account_info(accounts_iterable)?;
+        let pool_mint_token_account = next_account_info(accounts_iterable)?;
+        let pool_token_fee_account = next_account_info(accounts_iterable)?;
+        let pool_owner_account = next_account_info(accounts_iterable)?;
+
+        // Program IDs
+        let token_program_account = next_account_info(accounts_iterable)?;
+        let token_swap_program_account = next_account_info(accounts_iterable)?;
+
+        let current_network_time = Clock::get()?.unix_timestamp;
+
+        // Checking if the user has signed
+        if !user_account.is_signer {
+            msg!("Whitelist SwapSOL: User not signer");
+            return Err(ProgramError::MissingRequiredSignature);
+        }
+
+        // Checking the program id equality (token swap and token programs)
+        if !token_swap_program_account.key.eq(&token_swap_program_id()) {
+            msg!("Whitelist SwapSOL: Incorrect Token Swap Program ID");
+            return Err(ProgramError::IncorrectProgramId);
+        }
+
+        if !token_program_account.key.eq(&token_program_id()) {
+            msg!("Whitelist SwapSOL: Incorrect Token Program ID");
+            return Err(ProgramError::IncorrectProgramId);
+        }
+
+        // Checking if the whitelist accouts are all part of this program
+        if !whitelist_global_state_account.owner.eq(program_id) {
+            msg!("Whitelist SwapSOL: Passed Whitelist global state aaccount is invalid");
+            return Err(IncorrectStateAccount.into());
+        }
+
+        if !whitelist_user_state_account.owner.eq(program_id) {
+            msg!("Whitelist SwapSOL: Passed Whitelist user state aaccount is invalid");
+            return Err(IncorrectStateAccount.into());
+        }
+
+        // Checking the same as above, but for token and token swap accounts
+        if !token_swap_state_account.owner.eq(&token_swap_program_id()) {
+            msg!("Whitelist SwapSOL: Passed TokenSwap state aaccount is invalid");
+            return Err(IncorrectStateAccount.into());
+        }
+
+        if !user_native_sol_token_account.owner.eq(&token_program_id()) {
+            msg!("Whitelist SwapSOL: Passed Native SOL Token aaccount is invalid");
+            return Err(IncorrectStateAccount.into());
+        }
+
+        if !user_wlst_token_account.owner.eq(&token_program_id()) {
+            msg!("Whitelist SwapSOL: Passed Token Y aaccount is invalid");
+            return Err(IncorrectStateAccount.into());
+        }
+
+        if !token_swap_native_sol_token_account
+            .owner
+            .eq(&token_program_id())
+        {
+            msg!("Whitelist SwapSOL: Passed TokenSwap Native SOL Token aaccount is invalid");
+            return Err(IncorrectStateAccount.into());
+        }
+
+        if !token_swap_wlst_token_account.owner.eq(&token_program_id()) {
+            msg!("Whitelist SwapSOL: Passed TokenSwap Token Y aaccount is invalid");
+            return Err(IncorrectStateAccount.into());
+        }
+
+        if !pool_mint_token_account.owner.eq(&token_program_id()) {
+            msg!("Whitelist SwapSOL: Passed TokenSwap pool mint aaccount is invalid");
+            return Err(IncorrectStateAccount.into());
+        }
+
+        if !pool_token_fee_account.owner.eq(&token_program_id()) {
+            msg!("Whitelist SwapSOL: Passed TokenSwap Pool Fee Token aaccount is invalid");
+            return Err(IncorrectStateAccount.into());
+        }
+
+        // All account states
+        let whitelist_global_state =
+            WhitelistPDAGlobalState::try_from_slice(&whitelist_global_state_account.data.borrow())?;
+
+        let mut whitelist_user_state =
+            WhitelistUserState::try_from_slice(&whitelist_user_state_account.data.borrow())?;
+
+        let user_native_token_state =
+            TokenState::unpack(&user_native_sol_token_account.data.borrow())?;
+
+        let user_wlst_token_state = TokenState::unpack(&user_wlst_token_account.data.borrow())?;
+
+        // Checking if both NativeSOL and Y token accounts' owner is the user
+        if !user_native_token_state.owner.eq(&user_account.key) {
+            msg!("Whitelist SwapSOL: Native Token's owner is not the passed user");
+
+            return Err(ProgramError::IllegalOwner);
+        }
+
+        if !user_wlst_token_state.owner.eq(&user_account.key) {
+            msg!("Whitelist SwapSOL: Native Token's owner is not the passed user");
+
+            return Err(ProgramError::IllegalOwner);
+        }
+
+        // Checking if the Native SOL Token account has the right mint
+        if !user_native_token_state.mint.eq(&native_mint_account()) {
+            msg!("Whitelist SwapSOL: Passed token account's mint is not native_sol");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        // Checking if the Y Token account has the right mint
+        if !user_wlst_token_state
+            .mint
+            .eq(&whitelist_global_state.y_mint_account)
+        {
+            msg!("Whitelist SwapSOL: User Token Y Mint mismatch");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        // Checking if the Whitelist global state account has been initialized
+        if !whitelist_global_state.is_initialized() {
+            msg!("Whitelist SwapSOL: Global state not initialized yet");
+            return Err(ProgramError::UninitializedAccount);
+        }
+
+        // Checking if the Whitelist User state is not initialized
+        if whitelist_user_state.is_initialized() {
+            msg!("Whitelist SwapSOL: User State already initialized");
+            return Err(ProgramError::AccountAlreadyInitialized);
+        }
+
+        let is_allowed = whitelist_global_state
+            .whitelist_auth_addresses
+            .iter()
+            .find(|&&address| address.eq(user_account.key))
+            .is_some();
+
+        // Checking if the user account is whitelisted
+        if !is_allowed {
+            msg!("Whitelist SwapSOL: Passed user account is not allowed for swapping");
+            return Err(AccountNotWhitelisted.into());
+        }
+
+        // Checking if the user's native sol token account has enough balance
+        if user_native_token_state
+            .amount
+            .lt(&whitelist_global_state.price_per_token_y)
+        {
+            msg!("Whitelist SwapSOL: Insufficient SOL recognized");
+            return Err(ProgramError::InsufficientFunds);
+        }
+
+        // Checking if the Whitelist Global state's token swap state account matches with the passed account
+
+        if !token_swap_state_account
+            .key
+            .eq(&whitelist_global_state.token_swap_pool_state)
+        {
+            msg!("Whitelist SwapSOL: Token Swap State Account mismatch");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        // Checking that the user's y token account should be empty
+        if user_wlst_token_state.amount.gt(&0u64) {
+            msg!("Whitelist SwapSOL: User already redeemed SPL");
+            return Err(AccountAlreadyRedeemed.into());
+        }
+
+        msg!("Starting the Swap procedure");
+        let native_sol_to_spl_swap_ix = swap(
+            &token_swap_program_id(),
+            &token_program_id(),
+            &token_swap_state_account.key,
+            &swap_authority_pda_account.key,
+            &user_temporary_auth_token_account.key,
+            &user_native_sol_token_account.key,
+            &token_swap_native_sol_token_account.key,
+            &token_swap_wlst_token_account.key,
+            &user_wlst_token_account.key,
+            &pool_mint_token_account.key,
+            &pool_token_fee_account.key,
+            Some(&pool_owner_account.key),
+            Swap {
+                amount_in: input_sol_amount,
+                minimum_amount_out: expected_spl_token_amount,
+            },
+        )?;
+
+        invoke(
+            &native_sol_to_spl_swap_ix,
+            &[
+                token_swap_state_account.clone(),
+                swap_authority_pda_account.clone(),
+                user_temporary_auth_token_account.clone(),
+                user_native_sol_token_account.clone(),
+                token_swap_native_sol_token_account.clone(),
+                token_swap_wlst_token_account.clone(),
+                user_wlst_token_account.clone(),
+                pool_mint_token_account.clone(),
+                pool_token_fee_account.clone(),
+                token_program_account.clone(),
+                pool_owner_account.clone(),
+                token_swap_program_account.clone(),
+            ],
+        )?;
+
+        msg!("Assigning state for the whitelist user");
+        whitelist_user_state.is_initialized = true;
+        whitelist_user_state.whitelisted_by_account = *user_account.key;
+        whitelist_user_state.whitelisted_at = current_network_time;
+        whitelist_user_state.user_transfer_authority_account =
+            *user_temporary_auth_token_account.key;
+
+        whitelist_user_state
+            .serialize(&mut &mut whitelist_user_state_account.data.borrow_mut()[..])?;
+
+        Ok(())
+    }
+
     pub fn process(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
@@ -590,6 +839,19 @@ impl WhiteListProcessor {
             WhiteListInstruction::UnwrapSOLToken => {
                 msg!("Instruction: Whitelist Unwrap SOL");
                 Self::process_whitelist_unwrap_sol(accounts)
+            }
+
+            WhiteListInstruction::SwapSOLToken {
+                expected_spl_token_amount,
+                input_sol_amount,
+            } => {
+                msg!("Instruction: Whitelist Swap SOL");
+                Self::process_whitelist_swap_sol(
+                    input_sol_amount,
+                    expected_spl_token_amount,
+                    accounts,
+                    program_id,
+                )
             }
         }
     }
