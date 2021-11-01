@@ -74,7 +74,7 @@ import { createTokenAccountWithSOL } from "../../utils/token";
       wlstTokenAccount,
       whitelistCreator,
       [],
-      TOTAL_ACCOUNTS_ALLOWED
+      TOTAL_ACCOUNTS_ALLOWED * 10 ** 2
     );
 
     console.log(`STOPPING FURTHER MINTING FOR TOKEN B`);

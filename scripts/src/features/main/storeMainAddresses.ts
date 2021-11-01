@@ -22,11 +22,13 @@ import {
     console.log("CREATING STATE ACCOUNT DIRECTORIES");
     await fs.mkdirp(TOKEN_STATE_PATHS.tokenSwap);
     await fs.mkdirp(TOKEN_STATE_PATHS.whiteList);
+    await fs.mkdirp(TOKEN_STATE_PATHS.whiteListUser);
 
     await storeKeypair("user", "persons", true);
     await storeKeypair("masterAccount", "persons", true);
     await storeKeypair("whitelistCreator", "persons", true);
     await storeKeypair("tokenSwap", "state", true);
+    await storeKeypair("whiteListUser", "state", true);
   } catch (err) {
     console.error(err);
   }

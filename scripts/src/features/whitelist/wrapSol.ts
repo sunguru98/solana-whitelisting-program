@@ -16,7 +16,12 @@ import {
   TOKEN_PROGRAM_ID,
   WHITELIST_PROGRAM_ID,
 } from "../../constants";
-import { checkKeysDir, getKeyPair, sleep } from "../../utils/file";
+import {
+  checkKeysDir,
+  getKeyPair,
+  sleep,
+  storeTokenAccount,
+} from "../../utils/file";
 
 (async function () {
   try {
@@ -57,7 +62,7 @@ import { checkKeysDir, getKeyPair, sleep } from "../../utils/file";
     );
 
     const totalAmountToBeSent =
-      1 * LAMPORTS_PER_SOL +
+      10 * LAMPORTS_PER_SOL +
       (await SOLANA_CONNECTION.getMinimumBalanceForRentExemption(
         AccountLayout.span
       ));
@@ -79,7 +84,7 @@ import { checkKeysDir, getKeyPair, sleep } from "../../utils/file";
         "Since the associated token already exists, invoking whitelist WrapSOL"
       );
       await wrapSOL(
-        1 * LAMPORTS_PER_SOL,
+        10 * LAMPORTS_PER_SOL,
         user,
         associatedNativeSolTokenAddress
       );
@@ -136,8 +141,6 @@ async function createAndWrapSOL(
     data: instructionData,
   });
 
-  console.log("INSTRUCTION DATA: ", instructionData);
-
   await SOLANA_CONNECTION.sendTransaction(
     new Transaction().add(createAndWrapSOLIx),
     [owner],
@@ -147,8 +150,10 @@ async function createAndWrapSOL(
   console.log(
     `Create and Wrap of ${amount / LAMPORTS_PER_SOL} SOL successful :)`
   );
-  console.log(`Sleeping for 2s`);
-  await sleep(2000);
+
+  await storeTokenAccount("user", "wsol", tokenAccount, true);
+  console.log(`Sleeping for 5s`);
+  await sleep(5000);
 
   const {
     value: { amount: tAmount },
@@ -181,8 +186,6 @@ async function wrapSOL(
     data: instructionData,
   });
 
-  console.log("INSTRUCTION DATA: ", instructionData);
-
   await SOLANA_CONNECTION.sendTransaction(
     new Transaction().add(wrapSOLIx),
     [owner],
@@ -190,8 +193,8 @@ async function wrapSOL(
   );
 
   console.log(`Wrap of ${amount / LAMPORTS_PER_SOL} SOL successful :)`);
-  console.log(`Sleeping for 2s`);
-  await sleep(2000);
+  console.log(`Sleeping for 5s`);
+  await sleep(5000);
 
   const {
     value: { amount: tAmount },

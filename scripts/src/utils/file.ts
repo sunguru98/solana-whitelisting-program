@@ -17,6 +17,17 @@ async function createDirectories(subDir?: string) {
 
 export const checkKeysDir = async () => fs.pathExists(KEYS_FOLDER);
 
+export const getPublicKey = async (name: string, type?: WhiteListKeyType) => {
+  try {
+    const publicKey = await fs.readJSON(
+      path.resolve(KEYS_FOLDER, type || "persons", name, "publicKey.json")
+    );
+    return new PublicKey(publicKey);
+  } catch (err) {
+    return null;
+  }
+};
+
 export const storePublicKey = async (
   name: string,
   type: WhiteListKeyType,
@@ -42,7 +53,7 @@ export const storeKeypair = async (
   type: WhiteListKeyType,
   rewrite: boolean = false,
   keypair: Keypair = new Keypair()
-): Promise<Keypair | false> => {
+): Promise<Keypair | null> => {
   try {
     if (rewrite) {
       await createDirectories(type);
@@ -60,7 +71,7 @@ export const storeKeypair = async (
     return keypair;
   } catch (err) {
     console.error(err.message);
-    return false;
+    return null;
   }
 };
 

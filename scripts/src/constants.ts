@@ -34,6 +34,7 @@ export const TOKEN_NAMES: Record<string, string> = {
 export const TOKEN_STATE_PATHS: Record<string, string> = {
   tokenSwap: path.resolve(KEYS_FOLDER, "state", "tokenSwap"),
   whiteList: path.resolve(KEYS_FOLDER, "state", "whiteList"),
+  whiteListUser: path.resolve(KEYS_FOLDER, "state", "whiteListUser"),
 };
 
 export const TOKEN_MINT_PATHS: Record<string, string> = {

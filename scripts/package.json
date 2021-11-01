@@ -23,7 +23,11 @@
     "createtoken": "ts-node src/features/token/createTokenAndStopMint.ts",
     "createpool": "ts-node src/features/whitelist/createPool.ts",
     "initpda": "ts-node src/features/whitelist/initializePda.ts",
+    "swapsol": "ts-node src/features/whitelist/swapSol.ts",
     "wrapsol": "ts-node src/features/whitelist/wrapSol.ts",
-    "unwrapsol": "ts-node src/features/whitelist/unwrapSol.ts"
+    "unwrapsol": "ts-node src/features/whitelist/unwrapSol.ts",
+    "formatpool": "ts-node src/features/addressParse/tokenPool.ts",
+    "formatwlglobal": "ts-node src/features/addressParse/whiteListGlobal.ts",
+    "formatwluser": "ts-node src/features/addressParse/whiteListUser.ts"
   }
 }

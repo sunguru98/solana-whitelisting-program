@@ -13,7 +13,7 @@ export async function createMint(
     payer || creator,
     creator.publicKey,
     null,
-    0,
+    2,
     TOKEN_PROGRAM_ID
   );
   await storePublicKey(mintName, "mints", res.publicKey, true);

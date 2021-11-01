@@ -1,4 +1,4 @@
-import { Keypair, PublicKey } from "@solana/web3.js";
+import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { transferTokenOwner } from "../../utils/token";
 import {
   PRICE_PER_TOKEN_B,
@@ -15,12 +15,12 @@ import {
   getTokenAccount,
   sleep,
   storeKeypair,
+  storePublicKey,
   storeTokenAccount,
 } from "../../utils/file";
 import { createMint } from "../../utils/mint";
 import { CurveType } from "@solana/spl-token-swap";
 import { createTokenSwap } from "../../utils/swap";
-import { formatTokenSwapState } from "../../utils/layout";
 
 (async function () {
   try {
@@ -75,7 +75,7 @@ import { formatTokenSwapState } from "../../utils/layout";
     );
 
     await storeTokenAccount(
-      "swapAuthority",
+      "swapProgramOwner",
       "poolRecipient",
       poolRecipientTokenAccount,
       true
@@ -86,7 +86,7 @@ import { formatTokenSwapState } from "../../utils/layout";
     );
 
     await storeTokenAccount(
-      "whitelistCreator",
+      "swapProgramOwner",
       "poolFee",
       poolFeeTokenAccount,
       true
@@ -113,12 +113,12 @@ import { formatTokenSwapState } from "../../utils/layout";
       0,
       1,
       CurveType.ConstantPrice,
-      PRICE_PER_TOKEN_B
+      (PRICE_PER_TOKEN_B * LAMPORTS_PER_SOL) / 10 ** 2
     );
 
-    console.log("TOKEN SWAP SUCCESSFUL. DECIPHERING ACCOUNT STATE");
+    console.log("TOKEN POOL INIT SUCCESSFUL");
     await sleep(2000);
-    console.log(await formatTokenSwapState(tokenSwapStateAccount.publicKey));
+    await storePublicKey("swapAuthority", "persons", swapAuthority, true);
   } catch (err) {
     console.error(err.message);
   }

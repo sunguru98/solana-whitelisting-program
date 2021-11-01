@@ -1,10 +1,10 @@
 import {
   Keypair,
+  LAMPORTS_PER_SOL,
   PublicKey,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { formatWhitelistPDAData } from "../../utils/layout";
 import {
   PRICE_PER_TOKEN_B,
   SOLANA_CONNECTION,
@@ -28,12 +28,14 @@ import BN from "bn.js";
       wlstTokenAccount,
       wsolTokenAccount,
       whitelistCreator,
+      user,
       wlstMint,
     } = await checkForPreRequisites();
 
     const [whitelistCreatorBuf, w1, w2, w3, w4, w5] = [
       whitelistCreator.publicKey.toBuffer(),
-      ...[1, 2, 3, 4, 5].map(() => {
+      user.publicKey.toBuffer(),
+      ...[1, 2, 3, 4].map(() => {
         const pubkey = Keypair.generate().publicKey;
         return pubkey.toBuffer();
       }),
@@ -100,7 +102,10 @@ import BN from "bn.js";
       data: Buffer.from([
         0,
         bump,
-        ...new BN(PRICE_PER_TOKEN_B).toArray("le", 8),
+        ...new BN((PRICE_PER_TOKEN_B * LAMPORTS_PER_SOL) / 10 ** 2).toArray(
+          "le",
+          8
+        ),
         ...whitelistCreatorBuf,
         ...w1,
         ...w2,
@@ -116,15 +121,9 @@ import BN from "bn.js";
       { preflightCommitment: "confirmed", skipPreflight: false }
     );
 
-    console.log(
-      "INITIALIZED WHITELIST PDA SUCCESSFULLY. DECIPHERING WHITELIST STATE"
-    );
+    console.log("INITIALIZED WHITELIST PDA SUCCESSFULLY");
     await sleep(2000);
     await storePublicKey("whiteList", "state", whitelistProgramPDA, true);
-    const whiteAccInfo = await SOLANA_CONNECTION.getAccountInfo(
-      whitelistProgramPDA
-    );
-    console.log(formatWhitelistPDAData(whiteAccInfo?.data));
   } catch (err) {
     console.error(err);
   }
@@ -137,10 +136,11 @@ async function checkForPreRequisites() {
     );
   }
 
-  const whitelistCreator = (await getKeyPair("whitelistCreator", "persons"))!;
+  const whitelistCreator = await getKeyPair("whitelistCreator", "persons");
+  const user = await getKeyPair("user", "persons");
 
-  if (!whitelistCreator) {
-    throw new Error("Whitelist creator not found");
+  if (!whitelistCreator || !user) {
+    throw new Error("Person accounts not found");
   }
 
   if (!(await SOLANA_CONNECTION.getBalance(whitelistCreator.publicKey))) {
@@ -175,6 +175,7 @@ async function checkForPreRequisites() {
 
   return {
     whitelistCreator,
+    user,
     tokenSwapStateAccount,
     wlstMint,
     wlstTokenAccount,
